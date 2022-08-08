@@ -179,6 +179,20 @@ public class ExpiryDateCalculatorTest {
                         .build()
                 , LocalDate.of(2022, 5, 31)
         );
-
     }
+
+    // 10개월 요금을 납부하면 1년 제공
+    @Test
+    void 십만원을_납부하면_1년_제공() {
+        assertPayExpiryDate(
+                PayData.builder()
+                        .billingDate(LocalDate.of(2022, 1, 28))
+                        .payAmount(100_000)
+                        .build()
+                , LocalDate.of(2023, 1, 28)
+        );
+    }
+
+    //
+
 }

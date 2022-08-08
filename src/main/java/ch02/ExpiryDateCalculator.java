@@ -27,31 +27,55 @@ public class ExpiryDateCalculator {
     public LocalDate paycalculateExpiryDate(PayData payData) {
 
         // 전달 받은 금액에서 만원을 나눈 수를 다음 만료월 수로 사용한다.
-        int addedMonths = payData.getPayAmount() / 10_000;
+        int addedMonths = payData.getPayAmount() == 100_000 ?  12 : payData.getPayAmount() / 10_000;
 
         if (payData.getFirstBillingDate() != null) {
             // 첫 납부일과 만료일의 일자가 같지 않을 때 n만 원 납부하면 첫 납부일 기준으로 다음 만료일 정하기 위한 조건
-
-            // 다음 청구일(첫 납부일 이상)로 부터 만료일을 구한다.
-            LocalDate candidateExp = payData.getBillingDate().plusMonths(addedMonths);
-
-            // 첫 납부일의 일자와 만료일의 일자를 비교한다.
-            if (payData.getFirstBillingDate().getDayOfMonth() != candidateExp.getDayOfMonth()) {
-
-                // 첫 납부일의 일자가 만료월의 마지막 일자보다 클 때
-                if(YearMonth.from(candidateExp).lengthOfMonth() <
-                        payData.getFirstBillingDate().getDayOfMonth()) {
-                    // 만료월의 마지막 일자를 반환
-                    return candidateExp.withDayOfMonth(YearMonth.from(candidateExp).lengthOfMonth());
-                }
-
-                // 그 외 첫 납부일 일자와 만료일의 일자가 다를 때
-                // withDayOfMonth() 메소드를 통해 첫 납부일의 일자를 넘겨주어 해당 월(만료월)의 일자로 반환한다.
-                // 예) 첫 납부일이 1-10일이고 다음 청구일(2월)로 부터 만료월이 3월이면 3-10일을 반환한다.
-                return candidateExp.withDayOfMonth(payData.getFirstBillingDate().getDayOfMonth());
-            }
+            return expiryDateUsingFirstBillingDate(payData, addedMonths);
+        } else {
+            // 첫 납부일이 없을 경우는 현재 요청이 첫 납부일이 된다.
+            return payData.getBillingDate().plusMonths(addedMonths);
         }
-        return payData.getBillingDate().plusMonths(addedMonths);
+    }
+
+    // 첫 납부일과 만료월의 일자를 계산하는 보조 메서드
+    public LocalDate expiryDateUsingFirstBillingDate(PayData payData, int addedMonths) {
+        // 다음 청구일(첫 납부일 이상)로 부터 만료일을 구한다.
+        LocalDate candidateExp = payData.getBillingDate().plusMonths(addedMonths);
+
+        // 첫 납부일의 일자와 만료일의 일자를 비교한다.
+        if (isSameDayOfMonth(payData.getFirstBillingDate(), candidateExp)) {
+
+            // 첫 납부일의 일자를 구함
+            final int dayOfficeBilling = payData.getFirstBillingDate().getDayOfMonth();
+
+            // 만료월의 마지막 일자
+            final int dayLenOfCandiMon = lastDayOfMonth(candidateExp);
+
+            // 첫 납부일의 일자가 만료월의 마지막 일자보다 클 때
+            if(dayLenOfCandiMon < dayOfficeBilling) {
+                // 만료월의 마지막 일자를 반환
+                return candidateExp.withDayOfMonth(dayLenOfCandiMon);
+            }
+
+            // 그 외 첫 납부일 일자와 만료일의 일자가 다를 때
+            // withDayOfMonth() 메소드를 통해 첫 납부일의 일자를 넘겨주어 해당 월(만료월)의 일자로 반환한다.
+            // 예) 첫 납부일이 1-10일이고 다음 청구일(2월)로 부터 만료월이 3월이면 3-10일을 반환한다.
+            return candidateExp.withDayOfMonth(payData.getFirstBillingDate().getDayOfMonth());
+        } else {
+            // 첫 납부일과 다음 납부일의 일자가 같다면 납부일의 일자를 반환
+            return candidateExp;
+        }
+    }
+
+    // 코드 가독성을 위한 첫 납부일과 만료일 날짜 비교 보조 메서드
+    public boolean isSameDayOfMonth(LocalDate date, LocalDate date2) {
+        return date != date2 ? true : false;
+    }
+
+    // 코드 가독성을 위한 만료월의 마지막 일자를 구해주는 보조 메소드
+    public int lastDayOfMonth(LocalDate date) {
+        return YearMonth.from(date).lengthOfMonth();
     }
 
 }
